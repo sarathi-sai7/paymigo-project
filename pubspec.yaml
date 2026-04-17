@@ -1,0 +1,40 @@
+name: paymigo_landing
+description: Paymigo - AI-powered parametric income protection landing page
+
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  firebase_core: ^2.25.0
+  firebase_auth: ^4.15.0
+  cloud_firestore: ^4.13.0
+  fl_chart: ^0.66.0
+  http: ^1.2.0 
+  video_player: ^2.8.2
+  google_sign_in: ^6.2.1
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Add Inter font via Google Fonts if you have the package,
+  # or download Inter TTF files and place in assets/fonts/
+  # fonts:
+  #   - family: Inter
+  #     fonts:
+  #       - asset: assets/fonts/Inter-Regular.ttf
+  #       - asset: assets/fonts/Inter-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/Inter-Bold.ttf
+  #         weight: 700
+  #       - asset: assets/fonts/Inter-Black.ttf
+  #         weight: 900
