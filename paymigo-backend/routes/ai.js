@@ -41,12 +41,31 @@ router.post("/trigger-payout", async (req, res) => {
       });
     }
 
-    /// 🔥 CREATE CLAIM
+    // Find or create trigger event for auto-payout
+    let triggerEvent = await prisma.triggerEvent.findFirst({
+      where: { zoneId: worker.zoneId, triggerType: "WEATHER" }
+    });
+
+    if (!triggerEvent) {
+      triggerEvent = await prisma.triggerEvent.create({
+        data: {
+          zoneId: worker.zoneId,
+          triggerType: "WEATHER",
+          actualValue: rainfall,
+          threshold: threshold,
+          confidence: 0.95,
+          isActive: true
+        }
+      });
+    }
+
+    /// 🔥 CREATE CLAIM (CORRECTED SCHEMA)
     const claim = await prisma.claim.create({
       data: {
+        workerId: worker.id,
         policyId: policy.id,
-        description: `Rainfall ${rainfall}mm exceeded threshold ${threshold}mm`,
-        amount: 150,
+        triggerEventId: triggerEvent.id,
+        payoutAmount: 150,
         status: "APPROVED",
       },
     });
