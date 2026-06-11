@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/api_service.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -10,9 +10,40 @@ class AdminScreen extends StatefulWidget {
 
 class _AdminScreenState extends State<AdminScreen> {
   String filter = "PENDING";
+  List<dynamic> claims = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchClaims();
+  }
+
+  Future<void> fetchClaims() async {
+    setState(() => isLoading = true);
+    try {
+      final res = await ApiService.getAllClaims();
+      setState(() {
+        claims = res;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() => isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to fetch claims: $e")),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final filteredClaims = claims.where((c) {
+      if (filter == "ALL") return true;
+      return c["status"] == filter;
+    }).toList();
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(title: const Text("Admin Panel")),
@@ -42,84 +73,67 @@ class _AdminScreenState extends State<AdminScreen> {
 
           /// 🔥 CLAIM LIST
           Expanded(
-            child: StreamBuilder(
-              stream: FirebaseFirestore.instance
-                  .collection("claims")
-                  .orderBy("createdAt", descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(
-                      child: CircularProgressIndicator());
-                }
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: fetchClaims,
+                    child: filteredClaims.isEmpty
+                        ? const Center(
+                            child: Text("No Claims",
+                                style: TextStyle(color: Colors.white)))
+                        : ListView.builder(
+                            itemCount: filteredClaims.length,
+                            itemBuilder: (context, i) {
+                              final c = filteredClaims[i];
 
-                final docs = snapshot.data!.docs;
+                              return Card(
+                                color: Colors.grey[900],
+                                child: ListTile(
+                                  title: Text(
+                                    c["workerName"] ?? "Unknown",
+                                    style:
+                                        const TextStyle(color: Colors.white),
+                                  ),
+                                  subtitle: Text(
+                                    c["type"] ?? "Manual Claim",
+                                    style:
+                                        const TextStyle(color: Colors.grey),
+                                  ),
+                                  trailing: Column(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        "₹${c["amount"]}",
+                                        style: const TextStyle(
+                                            color: Colors.orange),
+                                      ),
+                                      Text(
+                                        c["status"],
+                                        style: TextStyle(
+                                          color: c["status"] == "APPROVED"
+                                              ? Colors.green
+                                              : c["status"] == "REJECTED"
+                                                  ? Colors.red
+                                                  : Colors.yellow,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
 
-                final claims = docs.where((doc) {
-                  if (filter == "ALL") return true;
-                  return doc["status"] == filter;
-                }).toList();
-
-                if (claims.isEmpty) {
-                  return const Center(
-                      child: Text("No Claims",
-                          style: TextStyle(color: Colors.white)));
-                }
-
-                return ListView.builder(
-                  itemCount: claims.length,
-                  itemBuilder: (context, i) {
-                    final c = claims[i];
-
-                    return Card(
-                      color: Colors.grey[900],
-                      child: ListTile(
-                        title: Text(
-                          c["workerName"] ?? "Unknown",
-                          style:
-                              const TextStyle(color: Colors.white),
-                        ),
-                        subtitle: Text(
-                          c["type"],
-                          style:
-                              const TextStyle(color: Colors.grey),
-                        ),
-                        trailing: Column(
-                          mainAxisAlignment:
-                              MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              "₹${c["amount"]}",
-                              style: const TextStyle(
-                                  color: Colors.orange),
-                            ),
-                            Text(
-                              c["status"],
-                              style: TextStyle(
-                                color: c["status"] == "APPROVED"
-                                    ? Colors.green
-                                    : c["status"] == "REJECTED"
-                                        ? Colors.red
-                                        : Colors.yellow,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        /// 👉 OPEN DETAILS
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (_) =>
-                                claimDialog(context, c.id, c),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+                                  /// 👉 OPEN DETAILS
+                                  onTap: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (_) =>
+                                          claimDialog(context, c["id"], c),
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                  ),
           ),
         ],
       ),
@@ -164,7 +178,7 @@ class _AdminScreenState extends State<AdminScreen> {
           onPressed: () async {
             await updateStatus(id, "REJECTED",
                 commentController.text);
-            Navigator.pop(context);
+            if (context.mounted) Navigator.pop(context);
           },
           child: const Text("Reject",
               style: TextStyle(color: Colors.red)),
@@ -175,7 +189,7 @@ class _AdminScreenState extends State<AdminScreen> {
           onPressed: () async {
             await updateStatus(id, "APPROVED",
                 commentController.text);
-            Navigator.pop(context);
+            if (context.mounted) Navigator.pop(context);
           },
           child: const Text("Approve"),
         ),
@@ -186,13 +200,19 @@ class _AdminScreenState extends State<AdminScreen> {
   /// 🔥 UPDATE STATUS
   Future<void> updateStatus(
       String id, String status, String comment) async {
-    await FirebaseFirestore.instance
-        .collection("claims")
-        .doc(id)
-        .update({
-      "status": status,
-      "adminComment": comment,
-      "updatedAt": DateTime.now(),
-    });
+    try {
+      if (status == "APPROVED") {
+        await ApiService.approveClaim(id);
+      } else {
+        await ApiService.rejectClaim(id);
+      }
+      await fetchClaims();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to update status: $e")),
+        );
+      }
+    }
   }
 }

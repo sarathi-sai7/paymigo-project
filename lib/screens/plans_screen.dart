@@ -184,14 +184,17 @@ class _PlansScreenState extends State<PlansScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                         onPressed: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => PlanCheckoutScreen(planId: "basic"),
-    ),
-  );
-},
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PlanCheckoutScreen(
+                                    planId: plan["name"]
+                                        .toString()
+                                        .toLowerCase()),
+                              ),
+                            );
+                          },
                           child: const Text("Select Plan"),
                         ),
                       )

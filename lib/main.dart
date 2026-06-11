@@ -9,6 +9,8 @@ import 'screens/demo_screen.dart';
 import 'screens/plans_screen.dart';
 import 'screens/onboard_screen.dart';
 import 'screens/admin_screen.dart';
+import 'screens/triggers_screen.dart';
+import 'screens/insurer_screen.dart';
 
 
 
@@ -51,7 +53,8 @@ class PaymigoApp extends StatelessWidget {
         "/onboard": (context) => const OnboardScreen(),
         "/admin": (context) => const AdminScreen(),
         "/how-it-works": (context) => const HowItWorksScreen(),
-
+        "/triggers": (context) => const TriggersScreen(),
+        "/insurer": (context) => const InsurerScreen(),
       },
     );
   }

@@ -3,6 +3,40 @@ import prisma from "../lib/prisma.js";
 
 const router = express.Router();
 
+/// 🔥 GET ALL CLAIMS (FOR ADMIN PANEL)
+router.get("/", async (req, res) => {
+  try {
+    const claims = await prisma.claim.findMany({
+      include: {
+        worker: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    const formattedClaims = claims.map((c) => ({
+      id: c.id,
+      workerName: c.worker?.name || "Unknown",
+      amount: c.payoutAmount,
+      type: "Manual Claim",
+      status: c.status,
+      createdAt: c.createdAt,
+    }));
+
+    res.json({
+      success: true,
+      data: formattedClaims,
+    });
+  } catch (error) {
+    console.error("❌ Fetch all claims error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch claims",
+    });
+  }
+});
+
 /// 🔥 GET USER PAYOUT HISTORY
 router.get("/:firebaseUid", async (req, res) => {
   const { firebaseUid } = req.params;
@@ -63,12 +97,31 @@ router.post("/claim", async (req, res) => {
 
     const policy = worker.policies[0];
 
-    /// 🔥 CREATE CLAIM
+    // Find or create placeholder trigger event for manual claim integration
+    let triggerEvent = await prisma.triggerEvent.findFirst({
+      where: { zoneId: worker.zoneId, triggerType: "MANUAL" },
+    });
+
+    if (!triggerEvent) {
+      triggerEvent = await prisma.triggerEvent.create({
+        data: {
+          zoneId: worker.zoneId,
+          triggerType: "MANUAL",
+          actualValue: 0,
+          threshold: 0,
+          confidence: 1.0,
+          isActive: false,
+        },
+      });
+    }
+
+    /// 🔥 CREATE CLAIM (CORRECTED SCHEMA FIELDS)
     const claim = await prisma.claim.create({
       data: {
+        workerId: worker.id,
         policyId: policy.id,
-        description: description || "Manual claim",
-        amount: amount || 0,
+        triggerEventId: triggerEvent.id,
+        payoutAmount: amount || 0,
         status: "PENDING",
       },
     });
@@ -94,7 +147,7 @@ router.post("/approve/:claimId", async (req, res) => {
 
   try {
     const claim = await prisma.claim.update({
-      where: { id: parseInt(claimId) },
+      where: { id: claimId }, // claimId is UUID String
       data: { status: "APPROVED" },
     });
 
@@ -103,7 +156,7 @@ router.post("/approve/:claimId", async (req, res) => {
       data: {
         claimId: claim.id,
         policyId: claim.policyId,
-        amount: claim.amount,
+        amount: claim.payoutAmount, // payoutAmount, not amount
         status: "SUCCESS",
         provider: "MANUAL",
       },
@@ -119,6 +172,31 @@ router.post("/approve/:claimId", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to approve claim",
+    });
+  }
+});
+
+
+/// 🔥 REJECT CLAIM (SIMULATION / ADMIN)
+router.post("/reject/:claimId", async (req, res) => {
+  const { claimId } = req.params;
+
+  try {
+    const claim = await prisma.claim.update({
+      where: { id: claimId },
+      data: { status: "REJECTED" },
+    });
+
+    res.json({
+      success: true,
+      claim,
+    });
+
+  } catch (error) {
+    console.error("❌ Reject error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Failed to reject claim",
     });
   }
 });

@@ -5,7 +5,7 @@ class ApiService {
   /// 🔥 BASE URL
 
   /// Android Emulator
-  static const String baseUrl = "https://opium-mourner-udder.ngrok-free.dev";
+  static const String baseUrl = String.fromEnvironment('API_URL', defaultValue: "https://opium-mourner-udder.ngrok-free.dev");
 
   /// Real Device (change to your PC IP)
   /// static const String baseUrl = "http://192.168.1.5:3000";
@@ -203,5 +203,21 @@ class ApiService {
     });
 
     return res["data"];
+  }
+
+  /// 🔥 GET ALL CLAIMS (FOR ADMIN)
+  static Future<List<dynamic>> getAllClaims() async {
+    final res = await _get("/api/payouts");
+    return res["data"];
+  }
+
+  /// 🔥 APPROVE CLAIM (FOR ADMIN)
+  static Future<void> approveClaim(String claimId) async {
+    await _post("/api/payouts/approve/$claimId", {});
+  }
+
+  /// 🔥 REJECT CLAIM (FOR ADMIN)
+  static Future<void> rejectClaim(String claimId) async {
+    await _post("/api/payouts/reject/$claimId", {});
   }
 }

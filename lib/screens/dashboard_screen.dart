@@ -165,6 +165,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               navItem("ai", "AI Engine", Icons.auto_awesome),
               navItem("wallet", "Wallet", Icons.account_balance_wallet),
               navItem("claims", "Claims", Icons.receipt_long),
+              navItem("triggers", "Live Weather", Icons.cloud),
+              navItem("insurer", "Insurer Panel", Icons.business),
+              navItem("admin", "Admin Panel", Icons.admin_panel_settings),
               navItem("profile", "Profile", Icons.person),
             ],
           ),
@@ -184,6 +187,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (id == "logout") {
           await FirebaseAuth.instance.signOut();
           Navigator.pushNamedAndRemoveUntil(context, "/", (r) => false);
+          return;
+        }
+        if (id == "triggers" || id == "insurer" || id == "admin") {
+          Navigator.pop(context); // close drawer
+          Navigator.pushNamed(context, "/$id");
           return;
         }
 

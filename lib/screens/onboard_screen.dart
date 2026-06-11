@@ -52,27 +52,27 @@ class _OnboardScreenState extends State<OnboardScreen> {
           "onboardingComplete": true,
         }, SetOptions(merge: true));
 
-        /// ✅ 2. NAVIGATE IMMEDIATELY (NO BLOCK)
+        /// 🔥 2. BACKEND CALLS (AWAITED)
+        await ApiService.createWorker(
+          firebaseUid: user.uid,
+          name: nameController.text.trim(),
+          phone: phoneController.text.trim(),
+        );
+
+        await ApiService.updateProfile(
+          uid: user.uid,
+          name: nameController.text.trim(),
+          phone: phoneController.text.trim(),
+          city: selectedZone,
+        );
+
+        /// ✅ 3. NAVIGATE AFTER SUCCESS
         if (!mounted) return;
 
         Navigator.pushNamedAndRemoveUntil(
           context,
           "/dashboard",
           (route) => false,
-        );
-
-        /// 🔥 3. BACKEND CALLS (NON-BLOCKING)
-        ApiService.createWorker(
-          firebaseUid: user.uid,
-          name: nameController.text.trim(),
-          phone: phoneController.text.trim(),
-        );
-
-        ApiService.updateProfile(
-          uid: user.uid,
-          name: nameController.text.trim(),
-          phone: phoneController.text.trim(),
-          city: selectedZone,
         );
 
       } catch (e) {
