@@ -176,4 +176,29 @@ router.post("/approve/:claimId", async (req, res) => {
   }
 });
 
+
+/// 🔥 REJECT CLAIM (SIMULATION / ADMIN)
+router.post("/reject/:claimId", async (req, res) => {
+  const { claimId } = req.params;
+
+  try {
+    const claim = await prisma.claim.update({
+      where: { id: claimId },
+      data: { status: "REJECTED" },
+    });
+
+    res.json({
+      success: true,
+      claim,
+    });
+
+  } catch (error) {
+    console.error("❌ Reject error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Failed to reject claim",
+    });
+  }
+});
+
 export default router;
